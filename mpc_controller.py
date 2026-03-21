@@ -1,6 +1,4 @@
 """
-mpc_controller.py
-=================
 Model Predictive Controller for highway driving.
 
 FIXES from original + bilateral road-edge barrier
@@ -38,9 +36,9 @@ from vehicle_model import (
 DEFAULT_WEIGHTS = dict(
     w_y    = 1.0,
     w_v    = 2.0,
-    w_th   = 0.1,
+    w_th   = 0.8,
     w_a    = 0.5,
-    w_d    = 1.0,
+    w_d    = 3.0,
     w_da   = 2.0,
     w_dd   = 5.0,
     w_yN   = 10.0,
