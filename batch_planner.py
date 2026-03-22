@@ -7,8 +7,8 @@ class BatchPlanner:
 
         self.mpc = mpc_controller
 
-        # Tuned weights
-        self.w_lane = 8.0
+        # FINAL tuned weights
+        self.w_lane = 12.0
         self.w_speed = 2.0
         self.w_collision = 50.0
         self.w_smooth = 2.0
@@ -30,20 +30,30 @@ class BatchPlanner:
 
         cost = 0.0
 
-        # Lane tracking
+        # =========================
+        # 1. Lane tracking (strong)
+        # =========================
         cost += self.w_lane * np.mean((traj[:, 1] - y_ref) ** 2)
 
-        # Speed tracking
+        # =========================
+        # 2. Speed tracking
+        # =========================
         cost += self.w_speed * np.mean((traj[:, 3] - 20.0) ** 2)
 
-        # Lane change penalty
+        # =========================
+        # 3. Lane change penalty
+        # =========================
         cost += self.w_lane_change * abs(y_ref - current_y)
 
-        # Forward progress
+        # =========================
+        # 4. Forward progress
+        # =========================
         progress = traj[-1, 0] - traj[0, 0]
         cost -= self.w_progress * progress
 
-        # Collision (smooth barrier)
+        # =========================
+        # 5. Collision penalty
+        # =========================
         for k, state in enumerate(traj):
             px, py = state[0], state[1]
             for obs in obstacles:
@@ -53,21 +63,31 @@ class BatchPlanner:
                 if dist < 8.0:
                     cost += self.w_collision * (8.0 - dist) ** 2
 
-        # Smoothness
+        # =========================
+        # 6. Smoothness
+        # =========================
         for k in range(1, len(controls)):
             cost += self.w_smooth * np.linalg.norm(
                 controls[k] - controls[k - 1]
             )
 
-        # HARD ROAD BOUNDARY
+        # =========================
+        # 7. HARD + BUFFER BOUNDARY
+        # =========================
+        LOW = -0.5
+        HIGH = 9.5
+        BUFFER = 0.5
+
         for state in traj:
             y = state[1]
 
-            if y < -0.45:
-                cost += 5000.0 * (-0.45 - y) ** 2
+            # LEFT SIDE
+            if y < LOW + BUFFER:
+                cost += 1500.0 * (LOW + BUFFER - y) ** 2
 
-            elif y > 9.45:
-                cost += 5000.0 * (y - 9.45) ** 2
+            # RIGHT SIDE
+            elif y > HIGH - BUFFER:
+                cost += 1500.0 * (y - (HIGH - BUFFER)) ** 2
 
         return cost
 
@@ -116,7 +136,9 @@ class BatchPlanner:
         if best_result is None:
             return None, all_results
 
+        # =========================
         # Lane commitment
+        # =========================
         if self.prev_best_lane is not None and best_lane is not None:
             if abs(best_lane - self.prev_best_lane) > 2.0:
                 for res in all_results:

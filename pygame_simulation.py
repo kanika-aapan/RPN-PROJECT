@@ -41,7 +41,7 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     clock = pygame.time.Clock()
 
-    env = HighwayEnv(dt=DT, scenario="overtake")
+    env = HighwayEnv(dt=DT, scenario="dense")
     mpc = MPCController(N=15, dt=DT)
     batch = BatchPlanner(mpc)
 
@@ -70,9 +70,9 @@ def main():
 
         state = env.step(state, u)
 
-        # stability fixes
+        # FINAL SAFETY CLAMP (STRICT LANES)
         state[3] = max(state[3], 5.0)
-        state[1] = np.clip(state[1], -0.5, 9.5)
+        state[1] = np.clip(state[1], 0.0, 8.0)
 
         draw_lane_lines(screen)
 
